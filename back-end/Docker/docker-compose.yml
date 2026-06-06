@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 123mudar
+      POSTGRES_DB: bcb
+    ports:
+      - '5432:5432'
