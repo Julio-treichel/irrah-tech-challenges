@@ -7,9 +7,12 @@ import {
 import { ClientsRepository } from '../../clients/clients.repository';
 import { MessagesRepository } from '../messages.repository';
 import { MessageQueueService } from '../queue/message-queue.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { SendMessageDto } from '../dto/send-message.dto';
-import { MessageResponseDto } from '../dto/message-response.dto';
+import { SendMessageResponseDto } from '../dto/send-message-response.dto';
 import { MESSAGE_COST } from '../enums/message-priority.enum';
+import { MessageStatus } from '../enums/message-status.enum';
+import { PlanType } from '../../clients/enums/plan-type.enum';
 
 @Injectable()
 export class SendMessageUseCase {
@@ -17,12 +20,13 @@ export class SendMessageUseCase {
         private readonly messagesRepository: MessagesRepository,
         private readonly clientsRepository: ClientsRepository,
         private readonly queueService: MessageQueueService,
+        private readonly prisma: PrismaService,
     ) {}
 
     async execute(
         clientId: number,
         dto: SendMessageDto,
-    ): Promise<MessageResponseDto> {
+    ): Promise<SendMessageResponseDto> {
         const conversation =
             await this.messagesRepository.findConversationByIdAndClientId(
                 dto.conversationId,
@@ -40,38 +44,49 @@ export class SendMessageUseCase {
         }
 
         const cost = MESSAGE_COST[dto.priority];
+        const planType = client.planType as PlanType;
 
-        if (client.planType === 'prepaid') {
+        if (planType === PlanType.PREPAID) {
             if (client.balance < cost) {
                 throw new HttpException(
                     `Insufficient balance. Required: R$${cost.toFixed(2)}, available: R$${client.balance.toFixed(2)}`,
                     HttpStatus.PAYMENT_REQUIRED,
                 );
             }
-            await this.clientsRepository.updateBalance(
-                clientId,
-                client.balance - cost,
-            );
         }
 
-        if (client.planType === 'postpaid') {
-            const consumed = client.balance + cost;
-            if (consumed > client.creditLimit) {
+        if (planType === PlanType.POSTPAID) {
+            const currentMonthlyUsage = client.balance;
+            if (currentMonthlyUsage + cost > client.creditLimit) {
                 throw new HttpException(
-                    `Credit limit exceeded. Limit: R$${client.creditLimit.toFixed(2)}, used: R$${client.balance.toFixed(2)}`,
+                    `Credit limit exceeded. Limit: R$${client.creditLimit.toFixed(2)}, used: R$${currentMonthlyUsage.toFixed(2)}`,
                     HttpStatus.PAYMENT_REQUIRED,
                 );
             }
-            await this.clientsRepository.updateBalance(clientId, consumed);
         }
 
-        const message = await this.messagesRepository.create({
-            conversationId: dto.conversationId,
-            content: dto.content,
-            sentById: clientId,
-            priority: dto.priority,
-            cost,
-        });
+        const newBalance =
+            planType === PlanType.PREPAID
+                ? client.balance - cost
+                : client.balance + cost;
+
+        const [, message] = await this.prisma.$transaction([
+            this.prisma.clients.update({
+                where: { id: clientId },
+                data: { balance: newBalance },
+            }),
+            this.prisma.messages.create({
+                data: {
+                    conversationId: dto.conversationId,
+                    content: dto.content,
+                    sentById: clientId,
+                    sentByType: 'client',
+                    priority: dto.priority,
+                    cost,
+                    status: MessageStatus.QUEUED,
+                },
+            }),
+        ]);
 
         this.queueService.enqueue({
             id: message.id,
@@ -79,12 +94,16 @@ export class SendMessageUseCase {
             timestamp: message.timestamp,
         });
 
+        const estimatedDelivery = new Date(message.timestamp.getTime());
+
         return {
-            ...message,
+            id: message.id,
+            status: message.status,
+            timestamp: message.timestamp,
+            estimatedDelivery,
+            cost: message.cost,
             currentBalance:
-                client.planType === 'prepaid'
-                    ? client.balance - cost
-                    : undefined,
+                planType === PlanType.PREPAID ? newBalance : undefined,
         };
     }
 }

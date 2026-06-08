@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MessageResponseDto } from './dto/message-response.dto';
 import { MessageStatus } from './enums/message-status.enum';
 import { MessagePriority } from './enums/message-priority.enum';
 
@@ -20,7 +19,7 @@ export class MessagesRepository {
         sentById: number;
         priority: MessagePriority;
         cost: number;
-    }): Promise<MessageResponseDto> {
+    }) {
         return this.prisma.messages.create({
             data: {
                 ...data,
@@ -30,20 +29,10 @@ export class MessagesRepository {
         });
     }
 
-    updateStatus(
-        id: number,
-        status: MessageStatus,
-    ): Promise<MessageResponseDto> {
+    updateStatus(id: number, status: MessageStatus) {
         return this.prisma.messages.update({
             where: { id },
             data: { status },
-        });
-    }
-
-    findByConversation(conversationId: number): Promise<MessageResponseDto[]> {
-        return this.prisma.messages.findMany({
-            where: { conversationId },
-            orderBy: [{ priority: 'asc' }, { timestamp: 'asc' }],
         });
     }
 }

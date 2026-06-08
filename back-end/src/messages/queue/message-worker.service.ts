@@ -1,11 +1,17 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import {
+    Injectable,
+    OnModuleDestroy,
+    OnModuleInit,
+    Logger,
+} from '@nestjs/common';
 import { MessagesRepository } from '../messages.repository';
 import { MessageQueueService } from './message-queue.service';
 import { MessageStatus } from '../enums/message-status.enum';
 
 @Injectable()
-export class MessageWorkerService implements OnModuleInit {
+export class MessageWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(MessageWorkerService.name);
+    private isRunning = false;
 
     constructor(
         private readonly queueService: MessageQueueService,
@@ -13,11 +19,16 @@ export class MessageWorkerService implements OnModuleInit {
     ) {}
 
     onModuleInit(): void {
+        this.isRunning = true;
         void this.processQueue();
     }
 
+    onModuleDestroy(): void {
+        this.isRunning = false;
+    }
+
     private async processQueue(): Promise<void> {
-        while (true) {
+        while (this.isRunning) {
             const item = this.queueService.dequeue();
 
             if (item) {

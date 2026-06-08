@@ -19,7 +19,7 @@ import { Request } from 'express';
 import { AuthGuard } from '../auth/auth.guard';
 import { SendMessageUseCase } from './useCase/send-message.use-case';
 import { SendMessageDto } from './dto/send-message.dto';
-import { MessageResponseDto } from './dto/message-response.dto';
+import { SendMessageResponseDto } from './dto/send-message-response.dto';
 
 @ApiTags('messages')
 @ApiBearerAuth()
@@ -34,7 +34,7 @@ export class MessagesController {
     @ApiResponse({
         status: HttpStatus.CREATED,
         description: 'Message queued successfully',
-        type: MessageResponseDto,
+        type: SendMessageResponseDto,
     })
     @ApiResponse({
         status: HttpStatus.NOT_FOUND,
@@ -51,7 +51,7 @@ export class MessagesController {
     async sendMessage(
         @Req() req: Request,
         @Body() dto: SendMessageDto,
-    ): Promise<MessageResponseDto> {
+    ): Promise<SendMessageResponseDto> {
         try {
             const clientId = req['clientId'] as number;
             return await this.sendMessageUseCase.execute(clientId, dto);

@@ -8,7 +8,7 @@ import {
     IsString,
     Min,
 } from 'class-validator';
-import { PlanType } from '../enums/play-type.enum';
+import { PlanType } from '../enums/plan-type.enum';
 import { DocumentType } from '../enums/document-type.enum';
 
 export class CreateClientDto {
@@ -19,7 +19,7 @@ export class CreateClientDto {
 
     @ApiProperty({
         description: 'CPF or CNPJ number (with or without mask)',
-        example: '529.982.247-25',
+        example: '52998224725',
     })
     @IsString()
     @IsNotEmpty()

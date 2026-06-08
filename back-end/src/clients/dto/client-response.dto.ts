@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { DocumentType } from '../enums/document-type.enum';
-import { PlanType } from '../enums/play-type.enum';
+import { PlanType } from '../enums/plan-type.enum';
 
 export class ClientDto {
     @ApiProperty({ description: 'Client ID' })

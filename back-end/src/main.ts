@@ -21,6 +21,7 @@ async function bootstrap() {
         .setDescription('API for the BCB project')
         .setVersion('1.0')
         .addTag('bcb')
+        .addBearerAuth()
         .build();
     const documentFactory = () => SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, documentFactory);

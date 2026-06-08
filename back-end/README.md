@@ -1,98 +1,112 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# BCB – Big Chat Brasil · Back-end
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST do sistema BCB, desenvolvida com NestJS + TypeScript + PostgreSQL via Prisma 7.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tecnologias
 
-## Description
+| Camada | Tecnologia |
+|---|---|
+| Framework | NestJS (Node.js) |
+| Linguagem | TypeScript |
+| ORM | Prisma 7 |
+| Banco de dados | PostgreSQL 16 |
+| Documentação | Swagger / OpenAPI |
+| Validação | class-validator / class-transformer |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Arquitetura
 
-## Project setup
+O projeto segue o padrão **Use Case por operação**, com separação clara entre:
 
-```bash
-$ npm install
+```
+src/
+├── auth/               # Autenticação via token de sessão
+├── clients/            # Cadastro de clientes (PF/PJ)
+├── conversations/      # Conversas e histórico de mensagens
+├── messages/           # Envio de mensagens + fila de prioridade
+│   └── queue/          # MessageQueueService + MessageWorkerService
+└── prisma/             # PrismaService (global)
 ```
 
-## Compile and run the project
+## Pré-requisitos
+
+- Node.js 20+
+- Docker e Docker Compose
+
+## Executando o projeto
+
+### 1. Suba o banco de dados
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cd Docker
+docker-compose up -d
 ```
 
-## Run tests
+### 2. Configure as variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do `back-end/`:
+
+```env
+DATABASE_URL="postgresql://root:123mudar@localhost:5432/bcb"
+PORT=3000
+```
+
+### 3. Instale dependências e rode as migrations
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
+npx prisma migrate deploy
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 4. Inicie o servidor
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# desenvolvimento
+npm run start:dev
+
+# produção
+npm run start:prod
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+A API estará disponível em `http://localhost:3000`.  
+Documentação Swagger: `http://localhost:3000/api`.
 
-## Resources
+## Fluxo principal
 
-Check out a few resources that may come in handy when working with NestJS:
+```
+POST /auth                         → login com CPF/CNPJ → retorna token
+GET  /conversations                → lista conversas do cliente autenticado
+POST /conversations                → cria nova conversa com um destinatário
+GET  /conversations/:id/messages   → histórico de mensagens de uma conversa
+POST /messages                     → envia mensagem (enfileira + debita saldo)
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Todos os endpoints (exceto `POST /auth` e `POST /clients`) exigem o header:
 
-## Support
+```
+Authorization: Bearer <token>
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Planos de pagamento
 
-## Stay in touch
+| Plano | Comportamento |
+|---|---|
+| **Pré-pago** | Verifica saldo → debita custo → enfileira mensagem |
+| **Pós-pago** | Verifica consumo mensal vs. limite → acumula consumo → enfileira mensagem |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Custos: mensagem normal **R$ 0,25** · mensagem urgente **R$ 0,50**.
 
-## License
+## Fila de mensagens
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Implementada em memória (`MessageQueueService`) com **array ordenado por prioridade e timestamp**:
+
+- Mensagens urgentes são sempre processadas antes das normais
+- Dentro da mesma prioridade, a ordem é FIFO (timestamp)
+- O `MessageWorkerService` processa a fila em background com simulated delivery (~1 s)
+- O worker respeita graceful shutdown via `OnModuleDestroy`
+
+## Decisões técnicas
+
+- **Sessões sem JWT**: autenticação simplificada via UUID de sessão persistido no banco, conforme orientação do desafio.
+- **`balance` para pós-pago**: o campo `balance` armazena o consumo mensal acumulado do cliente pós-pago (começa em 0 e aumenta até o `creditLimit`). Uma coluna dedicada `monthlyUsage` seria mais semântica, mas foi mantido para simplicidade no escopo do desafio.
+- **Fila em memória**: não sobrevive a reinicializações. Uma implementação com Redis/Bull seria o passo seguinte natural.
+- **`unreadCount` = 0**: contagem de mensagens não lidas requer rastreamento de leitura por cliente, não implementado neste escopo.
