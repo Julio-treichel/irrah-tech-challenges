@@ -1,20 +1,30 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule);
 
-  const config = new DocumentBuilder()
-    .setTitle('BCB API')
-    .setDescription('API for the BCB project')
-    .setVersion('1.0')
-    .addTag('bcb')
-    .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+    app.enableCors();
 
-  await app.listen(process.env.PORT ?? 3000);
+    app.useGlobalPipes(
+        new ValidationPipe({
+            whitelist: true,
+            forbidNonWhitelisted: true,
+        }),
+    );
+
+    const config = new DocumentBuilder()
+        .setTitle('BCB API')
+        .setDescription('API for the BCB project')
+        .setVersion('1.0')
+        .addTag('bcb')
+        .build();
+    const documentFactory = () => SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, documentFactory);
+
+    await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();
