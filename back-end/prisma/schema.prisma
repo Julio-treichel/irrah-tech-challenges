@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -33,6 +31,8 @@ model sessions {
   clientId  Int
   client    clients  @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([clientId])
 }
 
 model recipients {
@@ -50,6 +50,8 @@ model conversations {
   createdAt   DateTime   @default(now())
 
   messages messages[]
+
+  @@index([clientId])
 }
 
 model messages {
@@ -58,9 +60,11 @@ model messages {
   conversation   conversations @relation(fields: [conversationId], references: [id])
   content        String
   sentById       Int
-  sentByType     String
+  sentByType     String        @default("client")
   priority       String        @default("normal")
   status         String        @default("queued")
   cost           Float
   timestamp      DateTime      @default(now())
+
+  @@index([conversationId])
 }

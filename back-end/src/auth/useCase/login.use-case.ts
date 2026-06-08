@@ -7,6 +7,7 @@ import { ClientsRepository } from '../../clients/clients.repository';
 import { AuthRepository } from '../auth.repository';
 import { AuthRequestDto } from '../dto/auth-request.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
+import { DocumentType } from '../../clients/enums/document-type.enum';
 
 @Injectable()
 export class LoginUseCase {
@@ -24,7 +25,7 @@ export class LoginUseCase {
             throw new NotFoundException('Client not found');
         }
 
-        if (client.documentType !== dto.documentType.toString()) {
+        if ((client.documentType as DocumentType) !== dto.documentType) {
             throw new UnauthorizedException('Document type does not match');
         }
 
